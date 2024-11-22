@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cryptocurrency Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            padding: 50px 0;
+            background-color: #1f1f1f;
+            border-bottom: 3px solid #333;
+        }
+        h1 {
+            font-size: 3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+        .section-heading {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .form-section {
+            padding: 30px;
+            background-color: #1f1f1f;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 30px;
+        }
+        .form-label {
+            color: #ccc;
+        }
+        .form-select, .form-control {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .form-select:focus, .form-control:focus {
+            border-color: #007bff;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .comparison-card {
+            background-color: #222;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        .comparison-card:hover {
+            transform: translateY(-5px);
+        }
+        .percentage {
+            font-weight: bold;
+            font-size: 1.2rem;
+            display: inline-block;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        .green { color: green; }
+        .red { color: red; }
+        .green-bg { background-color: #28a745; color: white; }
+        .red-bg { background-color: #dc3545; color: white; }
+        .icon { font-size: 1.5rem; margin-right: 10px; }
+        .loading { font-size: 1.5rem; color: #ddd; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Cryptocurrency Dashboard</h1>
+        <p>Track and compare cryptocurrencies easily with detailed insights.</p>
+    </div>
+
+    <div class="container">
+        <div class="form-section">
+            <h3 class="section-heading">Compare Cryptocurrencies</h3>
+            <form id="compare-form">
+                <div class="mb-3 row">
+                    <label for="currency" class="col-sm-2 col-form-label form-label">Select Cryptocurrency:</label>
+                    <div class="col-sm-10">
+                        <select id="currency" class="form-select">
+                            <option value="">-- Select Currency --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="start-date" class="col-sm-2 col-form-label form-label">Select Date Range:</label>
+                    <div class="col-sm-5">
+                        <input type="date" id="start-date" class="form-control">
+                    </div>
+                    <div class="col-sm-5">
+                        <input type="date" id="end-date" class="form-control">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary" onclick="compareCrypto()">Compare</button>
+            </form>
+        </div>
+
+        <div class="form-section mt-4" id="comparison-results" style="display: none;">
+            <h3 class="section-heading">Historical Data and Comparison</h3>
+            <div id="historical-data"></div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchCryptoData() {
+            try {
+                const response = await fetch('/crypto_data');
+                const data = await response.json();
+                const currencySelect = document.getElementById('currency');
+
+                data.forEach(crypto => {
+                    const option = document.createElement('option');
+                    option.value = crypto.currency_id;
+                    option.textContent = crypto.currency_id;
+                    currencySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching cryptocurrency data:', error);
+            }
+        }
+
+        async function compareCrypto() {
+            const currency = document.getElementById('currency').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+
+            if (!currency || !startDate || !endDate) {
+                alert("Please select a currency and date range.");
+                return;
+            }
+
+            document.getElementById('comparison-results').style.display = 'block';
+            const response = await fetch(`/crypto_compare/${currency}?start_date=${startDate}&end_date=${endDate}`);
+            const data = await response.json();
+
+            if (data.error) {
+                document.getElementById('historical-data').innerHTML = `<p class="text-center text-danger">${data.error}</p>`;
+                return;
+            }
+
+            const avgPrice = parseFloat(data.average_price).toFixed(2);
+            const latestPrice = parseFloat(data.latest_price).toFixed(2);
+            const percentageDiff = parseFloat(data.percentage_diff).toFixed(2);
+
+            const percentageClass = percentageDiff >= 0 ? 'green' : 'red';
+            const sign = percentageDiff >= 0 ? '🟢' : '🔴';
+            const bgClass = percentageDiff >= 0 ? 'green-bg' : 'red-bg';
+
+            document.getElementById('historical-data').innerHTML = `
+                <div class="comparison-card">
+                    <h5>${currency} Comparison</h5>
+                    <p><strong>Last Recorded Price:</strong> ₹${latestPrice}</p>
+                    <p><strong>Average Price:</strong> ₹${avgPrice}</p>
+                    <p><strong>Percentage Difference:</strong> <span class="percentage ${percentageClass} ${bgClass}">${sign} ${percentageDiff}%</span></p>
+                    <p>${data.comparison}</p>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchCryptoData();
+            
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            const today = new Date().toISOString().split("T")[0];
+            const minDate = "2024-11-11";
+
+            startDateInput.setAttribute("min", minDate);
+            startDateInput.setAttribute("max", today);
+            endDateInput.setAttribute("min", minDate);
+            endDateInput.setAttribute("max", today);
+        });
+    </script>
+</body>
+</html>
